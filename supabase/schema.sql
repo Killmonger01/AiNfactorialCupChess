@@ -287,3 +287,27 @@ ALTER TABLE game_invites ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FALSE;
 -- ─── Realtime ─────────────────────────────────────────────────────────────────
 -- Push game_invites changes over WebSocket so challenge notifications are instant.
 ALTER PUBLICATION supabase_realtime ADD TABLE game_invites;
+
+-- ─── Performance indexes ─────────────────────────────────────────────────────
+
+-- games: covering index (user_id, result) serves every aggregate query
+-- (leaderboard, user stats, friend stats) without a heap lookup per row.
+-- The played_at index covers the getUserGames ORDER BY.
+CREATE INDEX IF NOT EXISTS idx_games_user_result
+  ON games (user_id, result);
+
+CREATE INDEX IF NOT EXISTS idx_games_user_played_at
+  ON games (user_id, played_at DESC);
+
+-- friendships: composite indexes match the two common WHERE patterns:
+--   get_friend_requests  → addressee_id + status = 'pending'
+--   get_friends          → each side (requester / addressee) + status = 'accepted'
+CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status
+  ON friendships (addressee_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_friendships_requester_status
+  ON friendships (requester_id, status);
+
+-- game_invites: covers get_incoming_invites (to_user_id + status = 'pending')
+CREATE INDEX IF NOT EXISTS idx_game_invites_to_status
+  ON game_invites (to_user_id, status);
