@@ -130,7 +130,12 @@ export function ChallengeNotification() {
             <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
               {displayName(invite.email)}
             </span>
-            {' '}wants to play against you
+            {' '}wants to play{' '}
+            {invite.royale ? (
+              <span style={{ color: '#f0a500', fontWeight: 700 }}>Chess Royale</span>
+            ) : (
+              'Normal Chess'
+            )}
           </span>
         </div>
 

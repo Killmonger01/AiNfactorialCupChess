@@ -276,6 +276,13 @@ $$;
 
 GRANT EXECUTE ON FUNCTION get_user_public_stats(UUID) TO anon, authenticated;
 
+-- ─── Chess Royale columns ────────────────────────────────────────────────────
+-- Add royale flag to multiplayer_games so the game knows which ruleset to apply.
+ALTER TABLE multiplayer_games ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FALSE;
+
+-- Add royale flag to game_invites so the notification can show the mode.
+ALTER TABLE game_invites ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FALSE;
+
 -- ─── Realtime ─────────────────────────────────────────────────────────────────
 -- Push game_invites changes over WebSocket so challenge notifications are instant.
 ALTER PUBLICATION supabase_realtime ADD TABLE game_invites;

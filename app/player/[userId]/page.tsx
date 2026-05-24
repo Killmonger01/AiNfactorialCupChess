@@ -14,6 +14,8 @@ import {
   type SendFriendRequestResult,
 } from '@/lib/db'
 import { SkPlayerProfile } from '@/components/Skeleton'
+import { ModePickerModal, type GameModeChoice } from '@/components/ModePickerModal'
+import { createInitialGameStateRoyale } from '@/lib/royale'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/AuthModal'
 import { supabase } from '@/lib/supabase'
@@ -180,8 +182,9 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
   const [loading,      setLoading]      = useState(true)
   const [notFound,     setNotFound]     = useState(false)
   const [friendStatus, setFriendStatus] = useState<FriendshipStatus | null>(null)
-  const [challenging,  setChallenging]  = useState(false)
-  const [authOpen,     setAuthOpen]     = useState(false)
+  const [challenging,   setChallenging]   = useState(false)
+  const [modePickOpen,  setModePickOpen]  = useState(false)
+  const [authOpen,      setAuthOpen]      = useState(false)
 
   const isMe = user?.id === userId
 
@@ -201,14 +204,20 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
     getFriendshipStatus(user.id, userId).then(setFriendStatus)
   }, [user, userId, isMe])
 
-  async function handleChallenge() {
+  function handleChallenge() {
     if (!user) { setAuthOpen(true); return }
+    setModePickOpen(true)
+  }
+
+  async function handleModeSelected(mode: GameModeChoice) {
+    setModePickOpen(false)
     setChallenging(true)
     try {
+      const royale       = mode === 'royale'
       const playerId     = getOrCreatePlayerId()
-      const initialState = createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId)
-      await sendGameInvite(userId, gameId)
+      const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
+      await sendGameInvite(userId, gameId, royale)
       router.push(`/play/${gameId}`)
     } catch (err) {
       console.error(err)
@@ -219,6 +228,13 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
   return (
     <>
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+      {modePickOpen && (
+        <ModePickerModal
+          onSelect={handleModeSelected}
+          onClose={() => setModePickOpen(false)}
+          loading={challenging}
+        />
+      )}
 
       {/* Header */}
       <header

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BoardComponent from '@/components/Board'
 import { getLegalMoves, movePiece } from '@/lib/chess'
+import { getLegalMovesRoyale, movePieceRoyale, ROYALE_RULE_LABELS } from '@/lib/royale'
 import { useMultiplayer } from '@/hooks/useMultiplayer'
 import { useAuth } from '@/hooks/useAuth'
 import { saveGame } from '@/lib/db'
@@ -94,7 +95,9 @@ export default function MultiplayerGamePage({
       if (selectedSquare) {
         const isLegal = legalMoves.some(m => m.row === sq.row && m.col === sq.col)
         if (isLegal) {
-          const result = movePiece(gameState.board, selectedSquare, sq, gameState)
+          const result = gameState.royale
+            ? movePieceRoyale(gameState.board, selectedSquare, sq, gameState)
+            : movePiece(gameState.board, selectedSquare, sq, gameState)
           setSelectedSquare(null)
           setLegalMoves([])
           applyMove(result.gameState, result.move).catch(console.error)
@@ -106,7 +109,11 @@ export default function MultiplayerGamePage({
       const piece = gameState.board[sq.row][sq.col]
       if (piece && piece.color === role) {
         setSelectedSquare(sq)
-        setLegalMoves(getLegalMoves(gameState.board, sq, gameState))
+        setLegalMoves(
+          gameState.royale
+            ? getLegalMovesRoyale(gameState.board, sq, gameState)
+            : getLegalMoves(gameState.board, sq, gameState),
+        )
       } else {
         setSelectedSquare(null)
         setLegalMoves([])
@@ -231,6 +238,51 @@ export default function MultiplayerGamePage({
         >
           {statusText}
         </div>
+
+        {/* ── Royale rule banner ─────────────────────────────────────── */}
+        {gameState.royale && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, rgba(240,165,0,0.1), rgba(240,165,0,0.04))',
+              border: '1px solid rgba(240,165,0,0.3)',
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 480,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f0a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Chess Royale
+              </span>
+              <span style={{ width: 1, height: 14, background: 'rgba(240,165,0,0.3)' }} />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
+                {ROYALE_RULE_LABELS[gameState.royale.rule]}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(240,165,0,0.65)' }}>
+                Rule changes in{' '}
+                <span style={{ fontWeight: 700, color: '#f0a500' }}>
+                  {gameState.royale.movesUntilChange}
+                </span>{' '}
+                {gameState.royale.movesUntilChange === 1 ? 'move' : 'moves'}
+              </span>
+              {gameState.royale.rule === 'double_move' && gameState.royale.doubleMoveDone && (
+                <>
+                  <span style={{ color: 'rgba(240,165,0,0.3)' }}>·</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f0a500' }}>
+                    Move 2 of 2
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Board ──────────────────────────────────────────────────── */}
         <BoardComponent

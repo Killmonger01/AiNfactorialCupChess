@@ -47,6 +47,7 @@ export async function createMultiplayerGame(
   supabase: SupabaseClient,
   initialState: GameState,
   playerId: string,
+  royale = false,
 ): Promise<string> {
   const { data, error } = await supabase
     .from('multiplayer_games')
@@ -55,6 +56,7 @@ export async function createMultiplayerGame(
       current_turn: 'white',
       status: 'waiting',
       white_player_id: playerId,
+      royale,
     })
     .select('id')
     .single()

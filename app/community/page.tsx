@@ -23,7 +23,9 @@ import AuthModal from '@/components/AuthModal'
 import { supabase } from '@/lib/supabase'
 import { createMultiplayerGame, getOrCreatePlayerId } from '@/lib/multiplayer'
 import { createInitialGameState } from '@/lib/chess'
+import { createInitialGameStateRoyale } from '@/lib/royale'
 import { SkLeaderboard, SkFriends, SkRequests } from '@/components/Skeleton'
+import { ModePickerModal, type GameModeChoice } from '@/components/ModePickerModal'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -217,7 +219,8 @@ export default function CommunityPage() {
   const [friendsLoading, setFriendsLoading] = useState(false)
   const [addFriendOpen, setAddFriendOpen]   = useState(false)
   const [authOpen, setAuthOpen]         = useState(false)
-  const [challenging, setChallenging]   = useState<string | null>(null) // friend_id being challenged
+  const [challenging,   setChallenging]   = useState<string | null>(null)
+  const [pendingFriend, setPendingFriend] = useState<Friend | null>(null)
 
   useEffect(() => {
     getLeaderboard()
@@ -268,14 +271,22 @@ export default function CommunityPage() {
     } catch (err) { console.error(err) }
   }
 
-  async function handleChallenge(friend: Friend) {
+  function handleChallenge(friend: Friend) {
     if (challenging) return
+    setPendingFriend(friend)  // open mode picker
+  }
+
+  async function handleModeSelected(mode: GameModeChoice) {
+    if (!pendingFriend) return
+    const friend = pendingFriend
+    setPendingFriend(null)
     setChallenging(friend.friend_id)
     try {
+      const royale       = mode === 'royale'
       const playerId     = getOrCreatePlayerId()
-      const initialState = createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId)
-      await sendGameInvite(friend.friend_id, gameId)
+      const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
+      await sendGameInvite(friend.friend_id, gameId, royale)
       router.push(`/play/${gameId}`)
     } catch (err) {
       console.error(err)
@@ -294,6 +305,13 @@ export default function CommunityPage() {
     <>
       {addFriendOpen && <AddFriendModal onClose={() => setAddFriendOpen(false)} />}
       {authOpen      && <AuthModal onClose={() => setAuthOpen(false)} />}
+      {pendingFriend && (
+        <ModePickerModal
+          onSelect={handleModeSelected}
+          onClose={() => setPendingFriend(null)}
+          loading={!!challenging}
+        />
+      )}
 
       {/* Header */}
       <header

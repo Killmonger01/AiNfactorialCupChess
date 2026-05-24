@@ -26,6 +26,22 @@ export interface Move {
   notation?: string
 }
 
+export type RoyaleRule =
+  | 'normal'
+  | 'pawns_backwards'
+  | 'king_two_squares'
+  | 'no_capture'
+  | 'double_move'
+  | 'no_pawns'
+  | 'swap_knights_bishops'
+
+export interface RoyaleState {
+  rule: RoyaleRule
+  moveCount: number         // total half-moves in the game
+  movesUntilChange: number  // counts down; rule changes when it hits 0
+  doubleMoveDone: boolean   // for double_move: has current player already moved once
+}
+
 export interface GameState {
   board: Board
   currentTurn: Color
@@ -42,6 +58,7 @@ export interface GameState {
   winner: Color | null
   isResigned?: boolean
   resignedBy?: Color
+  royale?: RoyaleState
 }
 
 export interface HistoryEntry {
