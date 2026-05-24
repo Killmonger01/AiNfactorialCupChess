@@ -64,7 +64,7 @@ export default function GameStatus({ gameState, onNewGame }: GameStatusProps) {
               className="mt-2 px-6 py-2.5 rounded-xl text-white font-bold transition-all duration-200 hover:-translate-y-px"
               style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}
             >
-              Rematch
+              Back to Home
             </button>
           </div>
         </div>

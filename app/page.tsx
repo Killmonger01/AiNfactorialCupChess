@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsPro } from '@/hooks/useIsPro'
 import { saveGame } from '@/lib/db'
 import { toAlgebraicNotation, createInitialGameState } from '@/lib/chess'
+import { ROYALE_RULE_LABELS, createInitialGameStateRoyale } from '@/lib/royale'
 import { supabase } from '@/lib/supabase'
 import { createMultiplayerGame, getOrCreatePlayerId } from '@/lib/multiplayer'
 
@@ -99,33 +100,28 @@ export default function Home() {
     if (movesCount === 0) gameSavedRef.current = false
   }, [movesCount])
 
-  function handleStart(m: GameMode, skill: number, color: 'white' | 'black' = 'white') {
+  function handleStart(m: GameMode, skill: number, color: 'white' | 'black' = 'white', royale = false) {
     setSetupOpen(false)
-    newGame(m, skill, color)
+    newGame(m, skill, color, royale)
   }
 
-  async function handleStartMultiplayer() {
+  async function handleStartMultiplayer(royale = false) {
     if (mpLoading) return
-    console.log('[MP] Play with Friend clicked')
     setMpLoading(true)
     setSetupOpen(false)
     try {
       const playerId     = getOrCreatePlayerId()
-      console.log('[MP] player id:', playerId)
-      const initialState = createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId)
-      console.log('[MP] game created, id:', gameId)
+      const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
       router.push(`/play/${gameId}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[MP] createMultiplayerGame failed:', msg)
-      // Show the error visibly so the user (and developer) can act on it
       window.alert(
         `Could not create multiplayer game:\n\n${msg}\n\n` +
         'Make sure the multiplayer_games table exists in Supabase ' +
         'and your NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY env vars are set.'
       )
-      // Reopen modal so the user can try another mode
       setSetupOpen(true)
     } finally {
       setMpLoading(false)
@@ -139,8 +135,9 @@ export default function Home() {
       {setupOpen && (
         <SetupModal
           onStart={handleStart}
-          onStartMultiplayer={handleStartMultiplayer}
+          onStartMultiplayer={(royale) => handleStartMultiplayer(royale)}
           multiplayerLoading={mpLoading}
+          onClose={() => setSetupOpen(false)}
         />
       )}
       {authOpen  && <AuthModal  onClose={() => setAuthOpen(false)} />}
@@ -313,6 +310,34 @@ export default function Home() {
                 : '👥 Two Players'}
             </div>
 
+            {/* Royale rule banner */}
+            {gameState.royale && (
+              <div
+                style={{
+                  padding: '8px 14px',
+                  background: 'linear-gradient(135deg, rgba(240,165,0,0.1), rgba(240,165,0,0.04))',
+                  border: '1px solid rgba(240,165,0,0.3)',
+                  borderRadius: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f0a500', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Chess Royale
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(240,165,0,0.65)' }}>
+                    <span style={{ fontWeight: 700, color: '#f0a500' }}>{gameState.royale.movesUntilChange}</span>
+                    {' '}moves left
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fff', marginTop: 3 }}>
+                  {ROYALE_RULE_LABELS[gameState.royale.rule]}
+                </p>
+                {gameState.royale.rule === 'double_move' && gameState.royale.doubleMoveDone && (
+                  <p style={{ fontSize: '0.7rem', color: '#f0a500', fontWeight: 700, marginTop: 2 }}>Move 2 of 2</p>
+                )}
+              </div>
+            )}
+
             {/* Status */}
             <GameStatus gameState={gameState} onNewGame={() => newGame(mode, skillLevel)} />
 
@@ -358,7 +383,7 @@ export default function Home() {
             </div>
 
             {/* Resign */}
-            {!gameState.isCheckmate && !gameState.isStalemate && !gameState.isResigned && (
+            {movesCount > 0 && !gameState.isCheckmate && !gameState.isStalemate && !gameState.isResigned && (
               <div className="flex gap-2">
                 {resignConfirm ? (
                   <>

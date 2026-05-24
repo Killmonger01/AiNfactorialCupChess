@@ -7,6 +7,7 @@ import {
   getLegalMoves,
   movePiece,
 } from '@/lib/chess'
+import { getLegalMovesRoyale, movePieceRoyale, createInitialGameStateRoyale } from '@/lib/royale'
 import { StockfishEngine, uciMoveToSquares } from '@/lib/stockfish'
 import type { Color, GameState, HistoryEntry, Move, PieceType, Square } from '@/lib/types'
 
@@ -29,13 +30,13 @@ type Action =
   | { type: 'SELECT'; square: Square }
   | { type: 'MOVE'; from: Square; to: Square; promotionPiece?: PieceType }
   | { type: 'UNDO' }
-  | { type: 'NEW_GAME'; mode: GameMode; skillLevel: number; playerColor: 'white' | 'black' }
+  | { type: 'NEW_GAME'; mode: GameMode; skillLevel: number; playerColor: 'white' | 'black'; royale?: boolean }
   | { type: 'RESTORE'; state: ChessUIState }
   | { type: 'RESIGN'; resigningColor: Color }
 
-function makeInitialState(mode: GameMode = 'pvp', skillLevel = 10, playerColor: 'white' | 'black' = 'white'): ChessUIState {
+function makeInitialState(mode: GameMode = 'pvp', skillLevel = 10, playerColor: 'white' | 'black' = 'white', royale = false): ChessUIState {
   return {
-    gameState: createInitialGameState(),
+    gameState: royale ? createInitialGameStateRoyale() : createInitialGameState(),
     history: [],
     selectedSquare: null,
     legalMoves: [],
@@ -52,7 +53,7 @@ function reducer(state: ChessUIState, action: Action): ChessUIState {
       return action.state
 
     case 'NEW_GAME':
-      return makeInitialState(action.mode, action.skillLevel, action.playerColor)
+      return makeInitialState(action.mode, action.skillLevel, action.playerColor, action.royale)
 
     case 'SELECT': {
       const { square } = action
@@ -85,7 +86,9 @@ function reducer(state: ChessUIState, action: Action): ChessUIState {
           piece.color === gameState.currentTurn &&
           !gameState.isCheckmate &&
           !gameState.isStalemate) {
-        const legal = getLegalMoves(gameState.board, square, gameState)
+        const legal = gameState.royale
+          ? getLegalMovesRoyale(gameState.board, square, gameState)
+          : getLegalMoves(gameState.board, square, gameState)
         return { ...state, selectedSquare: square, legalMoves: legal }
       }
 
@@ -97,13 +100,9 @@ function reducer(state: ChessUIState, action: Action): ChessUIState {
       const { gameState, history } = state
       const stateBefore = gameState
 
-      const { gameState: newGameState, move } = movePiece(
-        gameState.board,
-        from,
-        to,
-        gameState,
-        promotionPiece ?? 'queen',
-      )
+      const { gameState: newGameState, move } = gameState.royale
+        ? movePieceRoyale(gameState.board, from, to, gameState, promotionPiece ?? 'queen')
+        : movePiece(gameState.board, from, to, gameState, promotionPiece ?? 'queen')
 
       return {
         ...state,
@@ -262,10 +261,10 @@ export function useChess() {
     dispatch({ type: 'UNDO' })
   }, [])
 
-  const newGame = useCallback((mode: GameMode = 'pvp', skillLevel = 10, playerColor: 'white' | 'black' = 'white') => {
+  const newGame = useCallback((mode: GameMode = 'pvp', skillLevel = 10, playerColor: 'white' | 'black' = 'white', royale = false) => {
     aiRequestRef.current++
     setAiThinking(false)
-    dispatch({ type: 'NEW_GAME', mode, skillLevel, playerColor })
+    dispatch({ type: 'NEW_GAME', mode, skillLevel, playerColor, royale })
   }, [])
 
   const resign = useCallback(() => {
