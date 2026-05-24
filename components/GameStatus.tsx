@@ -7,6 +7,10 @@ interface GameStatusProps {
 
 export default function GameStatus({ gameState, onNewGame }: GameStatusProps) {
   const { currentTurn, isCheck, isCheckmate, isStalemate, winner, isResigned, resignedBy } = gameState
+  const isDiceMode = !!gameState.dice
+
+  // In dice mode, "checkmate" means the king was captured
+  const isKingCaptured = isDiceMode && isCheckmate && !isResigned
 
   return (
     <div className="flex flex-col gap-3">
@@ -26,7 +30,7 @@ export default function GameStatus({ gameState, onNewGame }: GameStatusProps) {
           <span className="font-semibold capitalize" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>
             {currentTurn}&apos;s turn
           </span>
-          {isCheck && (
+          {isCheck && !isDiceMode && (
             <span
               className="ml-1 px-2 py-0.5 rounded text-xs font-bold text-white"
               style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', letterSpacing: '0.05em', animation: 'jade-pulse 1.2s ease-in-out infinite', boxShadow: '0 0 10px rgba(220,38,38,0.5)' }}
@@ -44,10 +48,12 @@ export default function GameStatus({ gameState, onNewGame }: GameStatusProps) {
             className="shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm w-full mx-4"
             style={{ background: 'rgba(9,14,22,0.95)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '20px', backdropFilter: 'blur(24px)', boxShadow: '0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(16,185,129,0.08)' }}
           >
-            <div className="text-6xl">{isResigned ? '🏳️' : isCheckmate ? '♛' : '🤝'}</div>
+            <div className="text-6xl">{isResigned ? '🏳️' : isKingCaptured ? '💀' : isCheckmate ? '♛' : '🤝'}</div>
             <h2 className="text-2xl font-bold text-white text-center">
               {isResigned
                 ? `${resignedBy === 'white' ? 'White' : 'Black'} resigned — ${winner === 'white' ? 'White' : 'Black'} wins!`
+                : isKingCaptured
+                ? `${winner === 'white' ? 'White' : 'Black'} captured the king and wins!`
                 : isCheckmate
                 ? `Checkmate — ${winner === 'white' ? 'White' : 'Black'} wins!`
                 : 'Stalemate — Draw!'}
@@ -55,6 +61,8 @@ export default function GameStatus({ gameState, onNewGame }: GameStatusProps) {
             <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
               {isResigned
                 ? `${resignedBy === 'white' ? 'White' : 'Black'} chose to resign the game.`
+                : isKingCaptured
+                ? `The king was taken — no checks, no rules, just dice!`
                 : isCheckmate
                 ? `${winner === 'white' ? 'Black' : 'White'} has no legal moves and is in check.`
                 : 'No legal moves available. The game is a draw.'}

@@ -41,6 +41,7 @@ export function ChallengeNotification() {
               from_user_id: string
               royale: boolean
               fog_of_war: boolean
+              dice: boolean
               status: string
             }
             if (!row?.id || row.status !== 'pending') return
@@ -59,6 +60,7 @@ export function ChallengeNotification() {
               email:        profile.email,
               royale:       row.royale ?? false,
               fog_of_war:   row.fog_of_war ?? false,
+              dice:         row.dice ?? false,
               created_at:   '',
             })
             requestAnimationFrame(() => setVisible(true))
@@ -159,6 +161,8 @@ export function ChallengeNotification() {
               <span style={{ color: '#f0a500', fontWeight: 700 }}>Chess Royale</span>
             ) : invite.fog_of_war ? (
               <span style={{ color: '#6495ed', fontWeight: 700 }}>Fog of War</span>
+            ) : invite.dice ? (
+              <span style={{ color: '#a855f7', fontWeight: 700 }}>Dice Chess</span>
             ) : (
               'Normal Chess'
             )}

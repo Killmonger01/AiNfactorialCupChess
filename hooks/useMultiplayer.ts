@@ -24,6 +24,7 @@ export interface UseMultiplayerReturn {
   status: MultiplayerStatus
   error: string | null
   fogOfWar: boolean
+  diceMode: boolean
   applyMove: (newGameState: GameState, move: Move) => Promise<void>
   resign: () => Promise<void>
 }
@@ -41,6 +42,7 @@ export function useMultiplayer(gameId: string): UseMultiplayerReturn {
   const [status, setStatus]               = useState<MultiplayerStatus>('connecting')
   const [error, setError]                 = useState<string | null>(null)
   const [fogOfWar, setFogOfWar]           = useState(false)
+  const [diceMode, setDiceMode]           = useState(false)
 
   // Keep role in a ref so the Realtime closure always has the current value
   const roleRef = useRef<'white' | 'black' | null>(null)
@@ -68,6 +70,7 @@ export function useMultiplayer(gameId: string): UseMultiplayerReturn {
         setRole(r)
         roleRef.current = r
         setFogOfWar(game.fog_of_war ?? false)
+        setDiceMode(game.dice ?? false)
         applyRow(game, r)
 
         channel = subscribeToGame(supabase, gameId, (updated) => {
@@ -125,5 +128,5 @@ export function useMultiplayer(gameId: string): UseMultiplayerReturn {
       .eq('id', gameId)
   }, [role, gameState, gameId])
 
-  return { playerId, role, opponentConnected, gameState, lastMove, status, error, fogOfWar, applyMove, resign }
+  return { playerId, role, opponentConnected, gameState, lastMove, status, error, fogOfWar, diceMode, applyMove, resign }
 }

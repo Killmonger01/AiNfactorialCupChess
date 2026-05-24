@@ -289,6 +289,10 @@ ALTER TABLE game_invites ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FALSE;
 ALTER TABLE multiplayer_games ADD COLUMN IF NOT EXISTS fog_of_war BOOLEAN DEFAULT FALSE;
 ALTER TABLE game_invites      ADD COLUMN IF NOT EXISTS fog_of_war BOOLEAN DEFAULT FALSE;
 
+-- ─── Dice Chess columns ───────────────────────────────────────────────────────
+ALTER TABLE multiplayer_games ADD COLUMN IF NOT EXISTS dice BOOLEAN DEFAULT FALSE;
+ALTER TABLE game_invites      ADD COLUMN IF NOT EXISTS dice BOOLEAN DEFAULT FALSE;
+
 -- ─── Realtime ─────────────────────────────────────────────────────────────────
 -- Push game_invites changes over WebSocket so challenge notifications are instant.
 ALTER PUBLICATION supabase_realtime ADD TABLE game_invites;

@@ -24,6 +24,7 @@ export interface MultiplayerGameRow {
   created_at: string
   royale?: boolean
   fog_of_war?: boolean
+  dice?: boolean
 }
 
 // ─── Player identity ──────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ export async function createMultiplayerGame(
   royale = false,
   fogOfWar = false,
   creatorColor: 'white' | 'black' = 'white',
+  dice = false,
 ): Promise<string> {
   const { data, error } = await supabase
     .from('multiplayer_games')
@@ -63,6 +65,7 @@ export async function createMultiplayerGame(
       black_player_id: creatorColor === 'black' ? playerId : null,
       royale,
       fog_of_war: fogOfWar,
+      dice,
     })
     .select('id')
     .single()

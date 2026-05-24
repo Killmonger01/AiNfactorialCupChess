@@ -63,6 +63,7 @@ export interface GameInvite {
   email: string
   royale: boolean
   fog_of_war: boolean
+  dice: boolean
   created_at: string
 }
 
@@ -145,7 +146,7 @@ export async function getFriends(): Promise<Friend[]> {
 }
 
 /** Send a game challenge invite to a friend. */
-export async function sendGameInvite(toUserId: string, gameId: string, royale = false, fogOfWar = false): Promise<void> {
+export async function sendGameInvite(toUserId: string, gameId: string, royale = false, fogOfWar = false, dice = false): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
   const { error } = await supabase.from('game_invites').insert({
@@ -154,6 +155,7 @@ export async function sendGameInvite(toUserId: string, gameId: string, royale = 
     to_user_id: toUserId,
     royale,
     fog_of_war: fogOfWar,
+    dice,
   })
   if (error) throw error
 }

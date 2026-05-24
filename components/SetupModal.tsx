@@ -4,8 +4,8 @@ import { useState } from 'react'
 import type { GameMode } from '@/hooks/useChess'
 
 interface Props {
-  onStart: (mode: GameMode, skillLevel: number, playerColor?: 'white' | 'black', royale?: boolean) => void
-  onStartMultiplayer?: (royale: boolean, fogOfWar: boolean) => void
+  onStart: (mode: GameMode, skillLevel: number, playerColor?: 'white' | 'black', royale?: boolean, dice?: boolean) => void
+  onStartMultiplayer?: (royale: boolean, fogOfWar: boolean, dice?: boolean) => void
   multiplayerLoading?: boolean
   onClose?: () => void
 }
@@ -24,12 +24,14 @@ function ModePicker({
   onNormal,
   onRoyale,
   onFog,
+  onDice,
   onBack,
   loading,
 }: {
   onNormal: () => void
   onRoyale: () => void
   onFog?: () => void
+  onDice?: () => void
   onBack: () => void
   loading?: boolean
 }) {
@@ -120,6 +122,41 @@ function ModePicker({
             <p className="font-bold text-sm mb-0.5" style={{ color: '#6495ed' }}>Fog of War</p>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               Only see squares your pieces can reach. Enemy hidden in the fog.
+            </p>
+          </div>
+        </button>
+      )}
+
+      {/* Dice Chess */}
+      {onDice && (
+        <button
+          disabled={loading}
+          onClick={onDice}
+          className="flex items-center gap-4 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden"
+          style={{
+            background:   'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(168,85,247,0.03))',
+            border:       '1px solid rgba(168,85,247,0.3)',
+            borderRadius: '14px',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(168,85,247,0.55)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(168,85,247,0.3)' }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(168,85,247,0.5), transparent)' }} />
+          <div
+            className="w-12 h-12 flex items-center justify-center rounded-xl text-2xl flex-shrink-0"
+            style={{ background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)' }}
+          >
+            🎲
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="font-bold text-sm" style={{ color: '#a855f7' }}>Dice Chess</p>
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
+                NEW
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              3 случайные фигуры за ход. Король может быть съеден!
             </p>
           </div>
         </button>
@@ -225,6 +262,7 @@ export default function SetupModal({ onStart, onStartMultiplayer, multiplayerLoa
           <ModePicker
             onNormal={() => onStart('pvp', 10, 'white', false)}
             onRoyale={() => onStart('pvp', 10, 'white', true)}
+            onDice={() => onStart('dice', 10, 'white', false, true)}
             onBack={() => setPanel('main')}
           />
         )}
@@ -236,6 +274,7 @@ export default function SetupModal({ onStart, onStartMultiplayer, multiplayerLoa
             onNormal={() => onStartMultiplayer?.(false, false)}
             onRoyale={() => onStartMultiplayer?.(true, false)}
             onFog={() => onStartMultiplayer?.(false, true)}
+            onDice={() => onStartMultiplayer?.(false, false, true)}
             onBack={() => setPanel('main')}
           />
         )}

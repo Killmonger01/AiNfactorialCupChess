@@ -42,6 +42,11 @@ export interface RoyaleState {
   doubleMoveDone: boolean   // for double_move: has current player already moved once
 }
 
+export interface DiceState {
+  drawnPieces: PieceType[]                       // 3 drawn piece types for current turn
+  remaining: Partial<Record<PieceType, number>>  // remaining moves per type this turn
+}
+
 export interface GameState {
   board: Board
   currentTurn: Color
@@ -59,6 +64,7 @@ export interface GameState {
   isResigned?: boolean
   resignedBy?: Color
   royale?: RoyaleState
+  dice?: DiceState
 }
 
 export interface HistoryEntry {

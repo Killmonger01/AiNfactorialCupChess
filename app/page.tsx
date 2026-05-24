@@ -14,6 +14,7 @@ import { useIsPro } from '@/hooks/useIsPro'
 import { saveGame } from '@/lib/db'
 import { toAlgebraicNotation, createInitialGameState } from '@/lib/chess'
 import { ROYALE_RULE_LABELS, createInitialGameStateRoyale } from '@/lib/royale'
+import { createInitialGameStateDice, getDiceSlots, DICE_PIECE_ICONS, hasDiceMove } from '@/lib/diceChess'
 import { supabase } from '@/lib/supabase'
 import { createMultiplayerGame, getOrCreatePlayerId } from '@/lib/multiplayer'
 
@@ -27,7 +28,7 @@ const DIFFICULTIES = [
 
 const DIFF_LABEL: Record<number, string> = { 2: 'Easy', 10: 'Medium', 20: 'Hard' }
 
-type ActiveCard = 'ai' | 'pvp' | 'royale' | 'fog'
+type ActiveCard = 'ai' | 'pvp' | 'royale' | 'fog' | 'dice'
 
 // ─── Shared color picker for online game creation ────────────────────────────
 
@@ -198,7 +199,7 @@ export default function Home() {
   const {
     gameState, history, selectedSquare, legalMoves, lastMove,
     mode, skillLevel, playerColor, movesCount, aiThinking, engineReady,
-    handleSquareClick, undoMove, newGame, resign,
+    handleSquareClick, undoMove, newGame, resign, passDice,
   } = useChess()
 
   const { user, loading: authLoading, signOut } = useAuth()
@@ -245,20 +246,20 @@ export default function Home() {
     setResignConfirm(false)
   }
 
-  function startLocalGame(m: GameMode, skill: number, color: 'white' | 'black' = 'white', royale = false) {
-    newGame(m, skill, color, royale)
+  function startLocalGame(m: GameMode, skill: number, color: 'white' | 'black' = 'white', royale = false, dice = false) {
+    newGame(m, skill, color, royale, dice)
     setScreen('game')
     setActiveCard(null)
   }
 
-  async function startOnlineGame(royale = false, fogOfWar = false, color: 'white' | 'random' | 'black' = 'white') {
+  async function startOnlineGame(royale = false, fogOfWar = false, color: 'white' | 'random' | 'black' = 'white', dice = false) {
     if (mpLoading) return
     setMpLoading(true)
     const resolved: 'white' | 'black' = color === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : color
     try {
       const playerId = getOrCreatePlayerId()
-      const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
-      const gameId = await createMultiplayerGame(supabase, initialState, playerId, royale, fogOfWar, resolved)
+      const initialState = dice ? createInitialGameStateDice() : royale ? createInitialGameStateRoyale() : createInitialGameState()
+      const gameId = await createMultiplayerGame(supabase, initialState, playerId, royale, fogOfWar, resolved, dice)
       router.push(`/play/${gameId}`)
     } catch (err) {
       console.error(err)
@@ -412,6 +413,16 @@ export default function Home() {
                   accentBg="rgba(100,149,237,0.06)"
                   border="rgba(100,149,237,0.18)"
                   onClick={() => setActiveCard('fog')}
+                />
+                <ModeCard
+                  icon="🎲"
+                  title="Dice Chess"
+                  desc="Roll 3 random piece types — move them in any order. No check rules, capture the king to win!"
+                  accent="#e879f9"
+                  accentBg="rgba(232,121,249,0.06)"
+                  border="rgba(232,121,249,0.18)"
+                  badge="NEW"
+                  onClick={() => setActiveCard('dice')}
                 />
               </div>
             )}
@@ -576,6 +587,41 @@ export default function Home() {
                 </p>
               </SubPanel>
             )}
+
+            {/* ── Dice Chess sub-panel ──────────────────────────────────────── */}
+            {activeCard === 'dice' && (
+              <SubPanel title="🎲 Dice Chess" onBack={() => setActiveCard(null)}>
+                <div
+                  className="px-4 py-3 text-xs rounded-xl -mt-2"
+                  style={{
+                    background: 'rgba(232,121,249,0.07)',
+                    border: '1px solid rgba(232,121,249,0.2)',
+                    color: '#e879f9',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Each turn 3 random piece types are drawn — move them in any order. No check rules apply; capture the king directly to win!
+                </div>
+                <OnlineColorPicker value={onlineColor} onChange={setOnlineColor} />
+                <div className="flex flex-col gap-3">
+                  <OptionRow
+                    icon="🖥️"
+                    title="Local Match"
+                    desc="Two players on the same screen — pass and play"
+                    accent="#e879f9"
+                    onClick={() => startLocalGame('dice', 10, 'white', false, true)}
+                  />
+                  <OptionRow
+                    icon="🔗"
+                    title="Play Online"
+                    desc="Share a link and play remotely"
+                    accent="#e879f9"
+                    loading={mpLoading}
+                    onClick={() => startOnlineGame(false, false, onlineColor, true)}
+                  />
+                </div>
+              </SubPanel>
+            )}
           </div>
         </main>
       </>
@@ -644,15 +690,16 @@ export default function Home() {
             <div
               className="text-xs text-center py-1.5 px-3"
               style={{
-                background: mode === 'ai' ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
-                border: mode === 'ai' ? '1px solid rgba(16,185,129,0.2)' : '1px solid var(--border)',
+                background: mode === 'ai' ? 'rgba(16,185,129,0.08)' : mode === 'dice' ? 'rgba(232,121,249,0.08)' : 'rgba(255,255,255,0.04)',
+                border: mode === 'ai' ? '1px solid rgba(16,185,129,0.2)' : mode === 'dice' ? '1px solid rgba(232,121,249,0.2)' : '1px solid var(--border)',
                 borderRadius: '999px',
-                color: mode === 'ai' ? 'var(--accent)' : 'var(--text-muted)',
+                color: mode === 'ai' ? 'var(--accent)' : mode === 'dice' ? '#e879f9' : 'var(--text-muted)',
                 fontWeight: 500,
               }}
             >
               {mode === 'ai'
                 ? `🤖 vs AI — ${diffLabel}${!engineReady ? ' (loading…)' : ''}`
+                : mode === 'dice' ? '🎲 Dice Chess'
                 : gameState.royale ? '👑 Chess Royale' : '👥 Two Players'}
             </div>
 
@@ -679,6 +726,56 @@ export default function Home() {
                 </p>
                 {gameState.royale.rule === 'double_move' && gameState.royale.doubleMoveDone && (
                   <p style={{ fontSize: '0.7rem', color: '#f0a500', fontWeight: 700, marginTop: 2 }}>Move 2 of 2</p>
+                )}
+              </div>
+            )}
+
+            {/* Dice panel */}
+            {gameState.dice && !gameState.isCheckmate && !gameState.isStalemate && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(232,121,249,0.08), rgba(232,121,249,0.03))',
+                  border: '1px solid rgba(232,121,249,0.25)',
+                  borderRadius: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#e879f9', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    🎲 Dice — {gameState.currentTurn === 'white' ? 'White' : 'Black'}&apos;s turn
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {getDiceSlots(gameState.dice.drawnPieces, gameState.dice.remaining).map((slot, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '6px 4px',
+                        borderRadius: 8,
+                        border: `1px solid ${slot.active ? 'rgba(232,121,249,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                        background: slot.active ? 'rgba(232,121,249,0.1)' : 'rgba(255,255,255,0.03)',
+                        opacity: slot.active ? 1 : 0.35,
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>
+                        {DICE_PIECE_ICONS[slot.type][gameState.currentTurn]}
+                      </span>
+                      <span style={{ fontSize: '0.6rem', marginTop: 3, color: slot.active ? '#e879f9' : 'var(--text-muted)', fontWeight: 600, textTransform: 'capitalize' }}>
+                        {slot.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {Object.keys(gameState.dice.remaining).length === 0 && (
+                  <p style={{ fontSize: '0.7rem', color: '#e879f9', fontWeight: 700, marginTop: 6, textAlign: 'center' }}>
+                    All moves used — waiting for next turn
+                  </p>
                 )}
               </div>
             )}
@@ -720,6 +817,24 @@ export default function Home() {
                 Undo
               </button>
             </div>
+
+            {/* Pass turn button for dice mode when no moves available */}
+            {gameState.dice && !gameState.isCheckmate && !gameState.isStalemate &&
+              Object.keys(gameState.dice.remaining).length > 0 &&
+              !hasDiceMove(gameState.board, gameState.currentTurn, gameState.dice.remaining, gameState.enPassantTarget) && (
+              <button
+                onClick={passDice}
+                className="w-full py-2.5 text-sm font-bold transition-all duration-200 hover:-translate-y-px"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(232,121,249,0.15), rgba(232,121,249,0.08))',
+                  border: '1px solid rgba(232,121,249,0.4)',
+                  color: '#e879f9',
+                  borderRadius: '10px',
+                }}
+              >
+                Pass Turn (no moves)
+              </button>
+            )}
 
             {/* Resign */}
             {movesCount > 0 && !gameState.isCheckmate && !gameState.isStalemate && !gameState.isResigned && (
