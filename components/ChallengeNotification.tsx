@@ -50,6 +50,7 @@ export function ChallengeNotification() {
             if (!profile) return
 
             shownRef.current.add(row.id)
+            setAccepting(false)
             setInvite({
               id:           row.id,
               game_id:      row.game_id,
@@ -75,7 +76,7 @@ export function ChallengeNotification() {
 
   function dismiss() {
     setVisible(false)
-    // wait for slide-out animation then clear invite
+    setAccepting(false)
     setTimeout(() => setInvite(null), 320)
   }
 
