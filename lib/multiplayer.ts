@@ -44,13 +44,14 @@ export function getOrCreatePlayerId(): string {
 
 // ─── Game CRUD ────────────────────────────────────────────────────────────────
 
-/** Creates a new waiting game row; caller becomes white. Returns the game UUID. */
+/** Creates a new waiting game row. Returns the game UUID. */
 export async function createMultiplayerGame(
   supabase: SupabaseClient,
   initialState: GameState,
   playerId: string,
   royale = false,
   fogOfWar = false,
+  creatorColor: 'white' | 'black' = 'white',
 ): Promise<string> {
   const { data, error } = await supabase
     .from('multiplayer_games')
@@ -58,7 +59,8 @@ export async function createMultiplayerGame(
       fen: JSON.stringify(initialState),
       current_turn: 'white',
       status: 'waiting',
-      white_player_id: playerId,
+      white_player_id: creatorColor === 'white' ? playerId : null,
+      black_player_id: creatorColor === 'black' ? playerId : null,
       royale,
       fog_of_war: fogOfWar,
     })
@@ -91,27 +93,26 @@ export async function joinMultiplayerGame(
   if (g.white_player_id === playerId) return { role: 'white', game: g }
   if (g.black_player_id === playerId) return { role: 'black', game: g }
 
-  // Claim white slot if empty (edge case: white left before anyone joined)
+  // Claim white slot — activate if black slot is already taken (creator chose black)
   if (!g.white_player_id) {
+    const activate = !!g.black_player_id
     const { error: e } = await supabase
       .from('multiplayer_games')
-      .update({ white_player_id: playerId })
+      .update({ white_player_id: playerId, ...(activate ? { status: 'active' } : {}) })
       .eq('id', gameId)
     if (e) throw new Error(e.message)
-    return { role: 'white', game: { ...g, white_player_id: playerId } }
+    return { role: 'white', game: { ...g, white_player_id: playerId, status: activate ? 'active' : g.status } }
   }
 
-  // Claim black slot — activates the game
+  // Claim black slot — activate if white slot is already taken (normal case)
   if (!g.black_player_id) {
+    const activate = !!g.white_player_id
     const { error: e } = await supabase
       .from('multiplayer_games')
-      .update({ black_player_id: playerId, status: 'active' })
+      .update({ black_player_id: playerId, ...(activate ? { status: 'active' } : {}) })
       .eq('id', gameId)
     if (e) throw new Error(e.message)
-    return {
-      role: 'black',
-      game: { ...g, black_player_id: playerId, status: 'active' },
-    }
+    return { role: 'black', game: { ...g, black_player_id: playerId, status: activate ? 'active' : g.status } }
   }
 
   throw new Error('This game already has two players.')

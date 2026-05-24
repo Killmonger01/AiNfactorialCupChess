@@ -6,14 +6,15 @@ import { supabase } from '@/lib/supabase'
 export interface IsProState {
   isPro: boolean
   loading: boolean
-  /** Re-fetch (e.g. after set-pro call) */
   refresh: () => void
 }
 
+const CACHE_KEY = 'user:isPro'
+
 export function useIsPro(): IsProState {
-  const [isPro,    setIsPro]    = useState(false)
-  const [loading,  setLoading]  = useState(true)
-  const [tick,     setTick]     = useState(0)
+  const [isPro,   setIsPro]   = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [tick,    setTick]    = useState(0)
 
   const refresh = () => setTick(t => t + 1)
 
@@ -21,24 +22,30 @@ export function useIsPro(): IsProState {
     let cancelled = false
     setLoading(true)
 
+    // Show cached value immediately (stale-while-revalidate)
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached !== null) { setIsPro(JSON.parse(cached)); setLoading(false) }
+    } catch { /* ignore */ }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return
       if (!session?.user) {
-        console.log('[useIsPro] no session, isPro = false')
         setIsPro(false)
         setLoading(false)
+        try { localStorage.removeItem(CACHE_KEY) } catch { /* ignore */ }
         return
       }
-      console.log('[useIsPro] fetching profiles for user:', session.user.id)
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('is_pro')
         .eq('id', session.user.id)
         .maybeSingle()
-      console.log('[useIsPro] result:', { data, error })
       if (!cancelled) {
-        setIsPro(data?.is_pro ?? false)
+        const val = data?.is_pro ?? false
+        setIsPro(val)
         setLoading(false)
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(val)) } catch { /* ignore */ }
       }
     })
 

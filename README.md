@@ -2,7 +2,8 @@
 
 > Современное веб-приложение для игры в шахматы с ИИ-тренером, мультиплеером и монетизацией.
 
-🔗 **Живой сайт:** [nfactorial-chess-web-app-q5zk.vercel.app](https://ai-nfactorial-cup-chess.vercel.app)  
+🔗 **Живой сайт:** [nfactorial-chess-web-app-q5zk.vercel.app](https://ai-nfactorial-cup-chess.vercel.app)
+
 
 ## Что реализовано
 
