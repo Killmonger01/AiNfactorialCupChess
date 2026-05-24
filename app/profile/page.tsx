@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getUserGames, getUserStats, type GameRow, type UserStats } from '@/lib/db'
 import AuthModal from '@/components/AuthModal'
 import ReplayModal from '@/components/ReplayModal'
+import { SkStatCards, SkGameTable } from '@/components/Skeleton'
 
 const STAT_CARD_STYLES = [
   { gradient: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))', border: 'rgba(16,185,129,0.25)', glow: 'rgba(16,185,129,0.12)' },
@@ -53,10 +54,11 @@ export default function ProfilePage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
 
-  const [stats,   setStats]   = useState<UserStats | null>(null)
-  const [games,   setGames]   = useState<GameRow[]>([])
-  const [dbError, setDbError] = useState<string | null>(null)
-  const [authOpen, setAuthOpen] = useState(false)
+  const [stats,     setStats]     = useState<UserStats | null>(null)
+  const [games,     setGames]     = useState<GameRow[]>([])
+  const [dbLoading, setDbLoading] = useState(false)
+  const [dbError,   setDbError]   = useState<string | null>(null)
+  const [authOpen,  setAuthOpen]  = useState(false)
   const [replayGame, setReplayGame] = useState<GameRow | null>(null)
 
   // Redirect to sign-in modal if not logged in after auth resolves
@@ -66,9 +68,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user) return
+    setDbLoading(true)
     Promise.all([getUserStats(user.id), getUserGames(user.id)])
       .then(([s, g]) => { setStats(s); setGames(g) })
       .catch(err => setDbError(String(err)))
+      .finally(() => setDbLoading(false))
   }, [user])
 
   return (
@@ -136,7 +140,10 @@ export default function ProfilePage() {
         style={{ color: '#fff' }}
       >
         {authLoading && (
-          <p className="text-center mt-20" style={{ color: 'var(--text-muted)' }}>Loading…</p>
+          <div className="mt-10 flex flex-col gap-10">
+            <SkStatCards count={5} />
+            <SkGameTable rows={6} />
+          </div>
         )}
 
         {!authLoading && user && (
@@ -150,7 +157,9 @@ export default function ProfilePage() {
             )}
 
             {/* Stats cards */}
-            {stats && (
+            {dbLoading ? (
+              <div className="mb-12"><SkStatCards count={5} /></div>
+            ) : stats ? (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-12">
                 <StatCard label="Games"    value={stats.total}         icon="🎮" styleIdx={0} />
                 <StatCard label="Wins"     value={stats.wins}          icon="🏆" styleIdx={1} />
@@ -158,11 +167,13 @@ export default function ProfilePage() {
                 <StatCard label="Draws"    value={stats.draws}         icon="🤝" styleIdx={3} />
                 <StatCard label="Win Rate" value={`${stats.winRate}%`} icon="📈" isWinRate styleIdx={4} />
               </div>
-            )}
+            ) : null}
 
             {/* Game history */}
             <h2 className="text-xl font-bold mb-5">Game History</h2>
-            {games.length === 0 ? (
+            {dbLoading ? (
+              <SkGameTable rows={6} />
+            ) : games.length === 0 ? (
               <p className="text-sm" style={{ color: '#a0aec0' }}>
                 No games recorded yet. Play a game and finish it to save it here.
               </p>

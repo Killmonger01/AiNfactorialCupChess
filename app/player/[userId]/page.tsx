@@ -13,6 +13,7 @@ import {
   type FriendshipStatus,
   type SendFriendRequestResult,
 } from '@/lib/db'
+import { SkPlayerProfile } from '@/components/Skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/AuthModal'
 import { supabase } from '@/lib/supabase'
@@ -252,9 +253,7 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
       </header>
 
       <main className="min-h-[calc(100vh-60px)] p-8 max-w-2xl mx-auto" style={{ color: '#fff' }}>
-        {loading && (
-          <p className="text-center mt-20" style={{ color: 'var(--text-muted)' }}>Loading…</p>
-        )}
+        {loading && <SkPlayerProfile />}
 
         {!loading && notFound && (
           <div className="text-center mt-20">

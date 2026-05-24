@@ -23,6 +23,7 @@ import AuthModal from '@/components/AuthModal'
 import { supabase } from '@/lib/supabase'
 import { createMultiplayerGame, getOrCreatePlayerId } from '@/lib/multiplayer'
 import { createInitialGameState } from '@/lib/chess'
+import { SkLeaderboard, SkFriends, SkRequests } from '@/components/Skeleton'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -355,7 +356,7 @@ export default function CommunityPage() {
             <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
               Ranked by win rate — even one win puts you at the top.
             </p>
-            {lbLoading && <p className="text-center mt-20" style={{ color: 'var(--text-muted)' }}>Loading…</p>}
+            {lbLoading && <SkLeaderboard rows={7} />}
             {lbError   && <p className="text-red-400 text-sm">{lbError}</p>}
             {!lbLoading && !lbError && leaderboard.length === 0 && (
               <Empty icon="♟" title="No players yet" sub="Complete a game while logged in to appear here." />
@@ -439,7 +440,7 @@ export default function CommunityPage() {
             <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
               Your friends — challenge them to a friendly match.
             </p>
-            {friendsLoading && <p className="text-center mt-20" style={{ color: 'var(--text-muted)' }}>Loading…</p>}
+            {friendsLoading && <SkFriends rows={4} />}
             {!friendsLoading && friends.length === 0 && (
               <Empty icon="👥" title="No friends yet" sub='Add friends with the "+ Add Friend" button.' />
             )}
@@ -502,7 +503,7 @@ export default function CommunityPage() {
             <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
               Incoming friend requests and game challenges.
             </p>
-            {reqLoading && <p className="text-center mt-20" style={{ color: 'var(--text-muted)' }}>Loading…</p>}
+            {reqLoading && <SkRequests rows={3} />}
 
             {!reqLoading && friendReqs.length === 0 && gameInvites.length === 0 && (
               <Empty icon="📬" title="All clear" sub="When someone adds you or challenges you, it'll show up here." />

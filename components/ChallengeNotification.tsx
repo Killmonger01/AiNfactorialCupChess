@@ -6,25 +6,21 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { getIncomingInvites, respondToGameInvite, type GameInvite } from '@/lib/db'
 
-const TIMEOUT_SEC = 60
-
 function displayName(email: string) {
   return email.split('@')[0]
 }
 
 export function ChallengeNotification() {
-  const { user }  = useAuth()
-  const router    = useRouter()
+  const { user } = useAuth()
+  const router   = useRouter()
 
-  const [invite,      setInvite]      = useState<GameInvite | null>(null)
-  const [secondsLeft, setSecondsLeft] = useState(TIMEOUT_SEC)
-  const [accepting,   setAccepting]   = useState(false)
+  const [invite,    setInvite]    = useState<GameInvite | null>(null)
+  const [accepting, setAccepting] = useState(false)
+  const [visible,   setVisible]   = useState(false) // controls slide-in animation
 
-  // Track which invite IDs we've already surfaced so we never double-show
-  const shownRef   = useRef<Set<string>>(new Set())
-  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  // IDs we've already surfaced — use a ref to avoid re-subscribing on every render
+  const shownRef = useRef<Set<string>>(new Set())
 
-  // Subscribe to new rows in game_invites where to_user_id = me
   useEffect(() => {
     if (!user) return
 
@@ -45,9 +41,10 @@ export function ChallengeNotification() {
             if (newInvite) {
               shownRef.current.add(newInvite.id)
               setInvite(newInvite)
-              setSecondsLeft(TIMEOUT_SEC)
+              // small delay so the element is mounted before CSS transition kicks in
+              requestAnimationFrame(() => setVisible(true))
             }
-          } catch { /* silently ignore fetch errors */ }
+          } catch { /* ignore */ }
         },
       )
       .subscribe()
@@ -55,70 +52,69 @@ export function ChallengeNotification() {
     return () => { supabase.removeChannel(channel) }
   }, [user])
 
-  // Countdown — auto-dismiss when it hits 0 (no DB change, invite stays in Requests tab)
-  useEffect(() => {
-    if (!invite) return
-    timerRef.current = setInterval(() => {
-      setSecondsLeft(prev => {
-        if (prev <= 1) {
-          setInvite(null)
-          return TIMEOUT_SEC
-        }
-        return prev - 1
-      })
-    }, 1000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [invite])
-
-  if (!invite) return null
+  function dismiss() {
+    setVisible(false)
+    // wait for slide-out animation then clear invite
+    setTimeout(() => setInvite(null), 320)
+  }
 
   async function handleAccept() {
     if (!invite || accepting) return
     setAccepting(true)
     try { await respondToGameInvite(invite.id, true) } catch { /* ignore */ }
     const gameId = invite.game_id
-    setInvite(null)
+    dismiss()
     router.push(`/play/${gameId}`)
   }
 
   async function handleDecline() {
     if (!invite) return
     try { await respondToGameInvite(invite.id, false) } catch { /* ignore */ }
-    setInvite(null)
+    dismiss()
   }
 
-  const progress = (secondsLeft / TIMEOUT_SEC) * 100
+  if (!invite) return null
 
   return (
-    /* Backdrop */
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', animation: 'fade-in-backdrop 0.2s ease' }}
+      style={{
+        position: 'fixed',
+        top: 72,                         // sit just below the header
+        left: '50%',
+        transform: visible
+          ? 'translateX(-50%) translateY(0)'
+          : 'translateX(-50%) translateY(-24px)',
+        opacity: visible ? 1 : 0,
+        transition: 'transform 0.3s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease',
+        zIndex: 300,
+        pointerEvents: visible ? 'auto' : 'none',
+        width: 'max-content',
+        maxWidth: 'calc(100vw - 32px)',
+      }}
     >
-      {/* Card */}
       <div
-        className="w-full max-w-sm flex flex-col items-center gap-5 p-8 relative overflow-hidden"
         style={{
-          background: 'rgba(9,14,22,0.98)',
-          border: '1px solid rgba(240,165,0,0.3)',
-          borderRadius: '24px',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.85), 0 0 48px rgba(240,165,0,0.1)',
-          animation: 'modal-slide-up 0.28s cubic-bezier(0.34,1.56,0.64,1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '12px 16px 12px 14px',
+          background: 'rgba(9,14,22,0.97)',
+          border: '1px solid rgba(240,165,0,0.4)',
+          borderRadius: 16,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(240,165,0,0.08), 0 0 24px rgba(240,165,0,0.12)',
+          backdropFilter: 'blur(16px)',
         }}
       >
-        {/* Gold top-glow strip */}
+        {/* Icon */}
         <div
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(240,165,0,0.6), transparent)' }}
-        />
-
-        {/* Swords icon */}
-        <div
-          className="w-20 h-20 flex items-center justify-center rounded-full text-4xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(240,165,0,0.15), rgba(240,165,0,0.04))',
-            border: '2px solid rgba(240,165,0,0.35)',
-            boxShadow: '0 0 32px rgba(240,165,0,0.15)',
+            width: 38, height: 38,
+            borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18,
+            flexShrink: 0,
+            background: 'linear-gradient(135deg, rgba(240,165,0,0.18), rgba(240,165,0,0.05))',
+            border: '1px solid rgba(240,165,0,0.35)',
             animation: 'swords-pulse 1.4s ease-in-out infinite',
           }}
         >
@@ -126,54 +122,41 @@ export function ChallengeNotification() {
         </div>
 
         {/* Text */}
-        <div className="text-center">
-          <p className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif" }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f0a500', fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>
             Challenge!
-          </p>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            <span style={{ color: '#f0a500', fontWeight: 700 }}>
+          </span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
               {displayName(invite.email)}
             </span>
-            {' '}is challenging you to a game
-          </p>
+            {' '}wants to play against you
+          </span>
         </div>
 
-        {/* Progress bar countdown */}
-        <div className="w-full flex flex-col items-center gap-1.5">
-          <div
-            className="w-full h-1 rounded-full overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-1000 ease-linear"
-              style={{
-                width: `${progress}%`,
-                background: progress > 50
-                  ? 'linear-gradient(90deg, #f0a500, #f5c518)'
-                  : progress > 20
-                  ? 'linear-gradient(90deg, #f0a500, #ef4444)'
-                  : '#ef4444',
-              }}
-            />
-          </div>
-          <p className="text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
-            {secondsLeft}s
-          </p>
-        </div>
+        {/* Divider */}
+        <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
 
-        {/* Action buttons */}
-        <div className="flex gap-3 w-full">
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button
             onClick={handleDecline}
-            className="flex-1 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0"
             style={{
+              padding: '6px 14px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
               background: 'transparent',
               border: '1px solid rgba(239,68,68,0.4)',
               color: '#f87171',
-              borderRadius: '12px',
+              borderRadius: 9,
+              cursor: 'pointer',
+              transition: 'background 0.15s, transform 0.12s',
+              whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'rgba(239,68,68,0.06)' }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            onMouseDown={e  => { (e.currentTarget as HTMLButtonElement).style.transform  = 'scale(0.96)' }}
+            onMouseUp={e    => { (e.currentTarget as HTMLButtonElement).style.transform  = 'scale(1)' }}
           >
             Decline
           </button>
@@ -181,16 +164,25 @@ export function ChallengeNotification() {
           <button
             onClick={handleAccept}
             disabled={accepting}
-            className="flex-1 py-3 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
-              background: 'linear-gradient(135deg, #f0a500, #d97706)',
-              borderRadius: '12px',
-              boxShadow: '0 4px 20px rgba(240,165,0,0.4)',
+              padding: '6px 16px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              background: accepting ? 'rgba(240,165,0,0.5)' : 'linear-gradient(135deg, #f0a500, #d97706)',
+              color: '#1a0a00',
+              border: 'none',
+              borderRadius: 9,
+              cursor: accepting ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 12px rgba(240,165,0,0.35)',
+              transition: 'box-shadow 0.15s, transform 0.12s',
+              whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; if (!b.disabled) b.style.boxShadow = '0 6px 28px rgba(240,165,0,0.6)' }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.boxShadow = '0 4px 20px rgba(240,165,0,0.4)' }}
+            onMouseEnter={e => { if (!accepting) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(240,165,0,0.55)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(240,165,0,0.35)' }}
+            onMouseDown={e  => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)' }}
+            onMouseUp={e    => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
           >
-            {accepting ? 'Joining…' : '⚔ Accept!'}
+            {accepting ? 'Joining…' : '⚔ Accept'}
           </button>
         </div>
       </div>
