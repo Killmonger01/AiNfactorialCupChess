@@ -3,8 +3,6 @@
 > Современное веб-приложение для игры в шахматы с ИИ-тренером, мультиплеером и монетизацией.
 
 🔗 **Живой сайт:** [nfactorial-chess-web-app-q5zk.vercel.app](https://nfactorial-chess-web-app-q5zk.vercel.app)  
-📦 **Репозиторий:** [github.com/Killmonger01/Nfactorial-ChessWebApp](https://github.com/Killmonger01/Nfactorial-ChessWebApp)
-
 
 ## Что реализовано
 
