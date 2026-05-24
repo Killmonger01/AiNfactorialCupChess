@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { getIncomingInvites, respondToGameInvite, type GameInvite } from '@/lib/db'
+import { respondToGameInvite, getUserPublicProfile, type GameInvite } from '@/lib/db'
 
 function displayName(email: string) {
   return email.split('@')[0]
@@ -16,9 +16,8 @@ export function ChallengeNotification() {
 
   const [invite,    setInvite]    = useState<GameInvite | null>(null)
   const [accepting, setAccepting] = useState(false)
-  const [visible,   setVisible]   = useState(false) // controls slide-in animation
+  const [visible,   setVisible]   = useState(false)
 
-  // IDs we've already surfaced — use a ref to avoid re-subscribing on every render
   const shownRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -34,20 +33,42 @@ export function ChallengeNotification() {
           table:  'game_invites',
           filter: `to_user_id=eq.${user.id}`,
         },
-        async () => {
+        async (payload) => {
           try {
-            const invites   = await getIncomingInvites()
-            const newInvite = invites.find(i => !shownRef.current.has(i.id))
-            if (newInvite) {
-              shownRef.current.add(newInvite.id)
-              setInvite(newInvite)
-              // small delay so the element is mounted before CSS transition kicks in
-              requestAnimationFrame(() => setVisible(true))
+            const row = payload.new as {
+              id: string
+              game_id: string
+              from_user_id: string
+              royale: boolean
+              status: string
             }
-          } catch { /* ignore */ }
+            if (!row?.id || row.status !== 'pending') return
+            if (shownRef.current.has(row.id)) return
+
+            // Fetch sender's public profile to get their display name
+            const profile = await getUserPublicProfile(row.from_user_id)
+            if (!profile) return
+
+            shownRef.current.add(row.id)
+            setInvite({
+              id:           row.id,
+              game_id:      row.game_id,
+              from_user_id: row.from_user_id,
+              email:        profile.email,
+              royale:       row.royale ?? false,
+              created_at:   '',
+            })
+            requestAnimationFrame(() => setVisible(true))
+          } catch (err) {
+            console.error('[ChallengeNotification] payload error:', err)
+          }
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[ChallengeNotification] Realtime channel error — make sure game_invites is in the supabase_realtime publication')
+        }
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [user])

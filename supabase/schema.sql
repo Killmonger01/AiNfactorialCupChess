@@ -229,12 +229,13 @@ RETURNS TABLE (
   game_id      TEXT,
   from_user_id UUID,
   email        TEXT,
+  royale       BOOLEAN,
   created_at   TIMESTAMPTZ
 )
 LANGUAGE sql
 SECURITY DEFINER
 AS $$
-  SELECT gi.id, gi.game_id, gi.from_user_id, u.email, gi.created_at
+  SELECT gi.id, gi.game_id, gi.from_user_id, u.email, gi.royale, gi.created_at
   FROM game_invites gi
   JOIN auth.users u ON u.id = gi.from_user_id
   WHERE gi.to_user_id = auth.uid()
