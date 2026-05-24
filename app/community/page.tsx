@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocalCache } from '@/hooks/useLocalCache'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -209,64 +210,54 @@ export default function CommunityPage() {
   const router = useRouter()
 
   const [tab, setTab]                   = useState<Tab>('leaderboard')
-  const [leaderboard, setLeaderboard]   = useState<LeaderboardEntry[]>([])
-  const [friends, setFriends]           = useState<Friend[]>([])
-  const [friendReqs, setFriendReqs]     = useState<FriendRequest[]>([])
-  const [gameInvites, setGameInvites]   = useState<GameInvite[]>([])
-  const [lbLoading, setLbLoading]       = useState(true)
   const [lbError, setLbError]           = useState<string | null>(null)
-  const [reqLoading, setReqLoading]     = useState(false)
-  const [friendsLoading, setFriendsLoading] = useState(false)
   const [addFriendOpen, setAddFriendOpen]   = useState(false)
   const [authOpen, setAuthOpen]         = useState(false)
   const [challenging,   setChallenging]   = useState<string | null>(null)
   const [pendingFriend, setPendingFriend] = useState<Friend | null>(null)
 
-  useEffect(() => {
-    getLeaderboard()
-      .then(setLeaderboard)
-      .catch(err => setLbError(String(err)))
-      .finally(() => setLbLoading(false))
-  }, [])
+  const uid = user?.id ?? null
 
-  const loadFriends = useCallback(async () => {
-    if (!user) return
-    setFriendsLoading(true)
-    try { setFriends(await getFriends()) } catch { /* ignore */ }
-    finally { setFriendsLoading(false) }
-  }, [user])
+  const { data: leaderboard, loading: lbLoading } = useLocalCache<LeaderboardEntry[]>(
+    'community:leaderboard',
+    () => getLeaderboard().catch(err => { setLbError(String(err)); return [] }),
+  )
 
-  const loadRequests = useCallback(async () => {
-    if (!user) return
-    setReqLoading(true)
-    try {
+  const { data: friends, loading: friendsLoading, refresh: refreshFriends } = useLocalCache<Friend[]>(
+    uid ? `community:friends:${uid}` : null,
+    getFriends,
+    [uid],
+  )
+
+  const { data: requestsData, loading: reqLoading, refresh: refreshRequests } = useLocalCache<{ fr: FriendRequest[]; gi: GameInvite[] }>(
+    uid ? `community:requests:${uid}` : null,
+    async () => {
       const [fr, gi] = await Promise.all([getFriendRequests(), getIncomingInvites()])
-      setFriendReqs(fr)
-      setGameInvites(gi)
-    } catch { /* ignore */ }
-    finally { setReqLoading(false) }
-  }, [user])
+      return { fr, gi }
+    },
+    [uid],
+  )
 
-  useEffect(() => { if (tab === 'friends') loadFriends() }, [tab, loadFriends])
-  useEffect(() => { if (tab === 'requests') loadRequests() }, [tab, loadRequests])
+  const friendReqs     = requestsData?.fr ?? []
+  const gameInvites    = requestsData?.gi ?? []
+  const leaderboardArr = leaderboard ?? []
+  const friendsArr     = friends ?? []
 
-  // Keep requests badge count refreshed after auth resolves
-  useEffect(() => {
-    if (user) loadRequests()
-  }, [user, loadRequests])
+  const loadFriends  = refreshFriends
+  const loadRequests = refreshRequests
 
   async function handleFriendRequest(id: string, accept: boolean) {
     try {
       await respondToFriendRequest(id, accept)
-      setFriendReqs(prev => prev.filter(r => r.id !== id))
-      if (accept) loadFriends()
+      refreshRequests()
+      if (accept) refreshFriends()
     } catch (err) { console.error(err) }
   }
 
   async function handleGameInvite(invite: GameInvite, accept: boolean) {
     try {
       await respondToGameInvite(invite.id, accept)
-      setGameInvites(prev => prev.filter(i => i.id !== invite.id))
+      refreshRequests()
       if (accept) router.push(`/play/${invite.game_id}`)
     } catch (err) { console.error(err) }
   }
@@ -376,10 +367,10 @@ export default function CommunityPage() {
             </p>
             {lbLoading && <SkLeaderboard rows={7} />}
             {lbError   && <p className="text-red-400 text-sm">{lbError}</p>}
-            {!lbLoading && !lbError && leaderboard.length === 0 && (
+            {!lbLoading && !lbError && leaderboardArr.length === 0 && (
               <Empty icon="♟" title="No players yet" sub="Complete a game while logged in to appear here." />
             )}
-            {!lbLoading && !lbError && leaderboard.length > 0 && (
+            {!lbLoading && !lbError && leaderboardArr.length > 0 && (
               <div style={{ border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
                 <div
                   className="px-5 py-3.5 flex items-center gap-3"
@@ -388,9 +379,9 @@ export default function CommunityPage() {
                   <span className="text-xl">🏆</span>
                   <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                     Leading:&nbsp;
-                    <span style={{ color: 'var(--text-primary)' }}>{displayName(leaderboard[0].email)}</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{displayName(leaderboardArr[0].email)}</span>
                     &nbsp;·&nbsp;
-                    <span style={{ color: '#10b981' }}>{leaderboard[0].win_rate}% win rate</span>
+                    <span style={{ color: '#10b981' }}>{leaderboardArr[0].win_rate}% win rate</span>
                   </span>
                 </div>
                 <table className="w-full text-sm">
@@ -404,7 +395,7 @@ export default function CommunityPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((entry, i) => {
+                    {leaderboardArr.map((entry, i) => {
                       const medal = RANK_MEDAL[Number(entry.rank)]
                       const isTop = Number(entry.rank) <= 3
                       const isMe  = user?.id === entry.user_id
@@ -459,12 +450,12 @@ export default function CommunityPage() {
               Your friends — challenge them to a friendly match.
             </p>
             {friendsLoading && <SkFriends rows={4} />}
-            {!friendsLoading && friends.length === 0 && (
+            {!friendsLoading && friendsArr.length === 0 && (
               <Empty icon="👥" title="No friends yet" sub='Add friends with the "+ Add Friend" button.' />
             )}
-            {!friendsLoading && friends.length > 0 && (
+            {!friendsLoading && friendsArr.length > 0 && (
               <div style={{ border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
-                {friends.map((f, i) => (
+                {friendsArr.map((f, i) => (
                   <div
                     key={f.friendship_id}
                     className="flex items-center justify-between px-5 py-4"

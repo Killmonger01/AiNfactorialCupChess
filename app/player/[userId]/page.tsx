@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocalCache } from '@/hooks/useLocalCache'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -178,8 +179,6 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const [profile,      setProfile]      = useState<UserPublicProfile | null>(null)
-  const [loading,      setLoading]      = useState(true)
   const [notFound,     setNotFound]     = useState(false)
   const [friendStatus, setFriendStatus] = useState<FriendshipStatus | null>(null)
   const [challenging,   setChallenging]   = useState(false)
@@ -188,15 +187,14 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
 
   const isMe = user?.id === userId
 
-  useEffect(() => {
-    getUserPublicProfile(userId)
-      .then(p => {
-        if (!p) setNotFound(true)
-        else setProfile(p)
-      })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false))
-  }, [userId])
+  const { data: profile, loading } = useLocalCache<UserPublicProfile>(
+    `player-profile:${userId}`,
+    () => getUserPublicProfile(userId).then(p => {
+      if (!p) { setNotFound(true); throw new Error('not found') }
+      return p
+    }).catch(err => { setNotFound(true); throw err }),
+    [userId],
+  )
 
   // Load friendship status once auth resolves
   useEffect(() => {

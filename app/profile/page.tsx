@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocalCache } from '@/hooks/useLocalCache'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -54,26 +55,30 @@ export default function ProfilePage() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
 
-  const [stats,     setStats]     = useState<UserStats | null>(null)
-  const [games,     setGames]     = useState<GameRow[]>([])
-  const [dbLoading, setDbLoading] = useState(false)
-  const [dbError,   setDbError]   = useState<string | null>(null)
-  const [authOpen,  setAuthOpen]  = useState(false)
+  const [dbError,    setDbError]    = useState<string | null>(null)
+  const [authOpen,   setAuthOpen]   = useState(false)
   const [replayGame, setReplayGame] = useState<GameRow | null>(null)
 
-  // Redirect to sign-in modal if not logged in after auth resolves
+  const uid = user?.id ?? null
+
+  const { data: stats, loading: statsLoading } = useLocalCache<UserStats>(
+    uid ? `profile:stats:${uid}` : null,
+    () => getUserStats(uid!).catch(err => { setDbError(String(err)); throw err }),
+    [uid],
+  )
+
+  const { data: gamesData, loading: gamesLoading } = useLocalCache<GameRow[]>(
+    uid ? `profile:games:${uid}` : null,
+    () => getUserGames(uid!).catch(err => { setDbError(String(err)); throw err }),
+    [uid],
+  )
+
+  const games    = gamesData ?? []
+  const dbLoading = statsLoading || gamesLoading
+
   useEffect(() => {
     if (!authLoading && !user) setAuthOpen(true)
   }, [authLoading, user])
-
-  useEffect(() => {
-    if (!user) return
-    setDbLoading(true)
-    Promise.all([getUserStats(user.id), getUserGames(user.id)])
-      .then(([s, g]) => { setStats(s); setGames(g) })
-      .catch(err => setDbError(String(err)))
-      .finally(() => setDbLoading(false))
-  }, [user])
 
   return (
     <>
