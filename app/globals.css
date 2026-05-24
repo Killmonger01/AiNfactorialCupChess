@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; }
+
+:root {
+  --bg-base:      #070b0f;
+  --bg-surface:   #0d1520;
+  --bg-elevated:  #141f2e;
+  --bg-card:      #192638;
+  --border:       #1e3048;
+  --border-glow:  rgba(16, 185, 129, 0.15);
+
+  --accent:       #10b981;
+  --accent-dim:   #059669;
+  --accent-glow:  rgba(16, 185, 129, 0.22);
+
+  --gold:         #f0a500;
+  --gold-bright:  #f5c518;
+  --gold-glow:    rgba(240, 165, 0, 0.3);
+
+  --text-primary: #dde6f0;
+  --text-muted:   #4d6a80;
+  --text-subtle:  #2a4060;
+}
+
+body {
+  background-color: var(--bg-base);
+  /* Radial jade atmosphere + subtle dot grid */
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(16,185,129,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 100%, rgba(5,150,105,0.05) 0%, transparent 60%),
+    radial-gradient(circle, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px;
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+/* Subtle scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+/* Keyframes used across the app */
+@keyframes jade-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+@keyframes gold-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes border-glow-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
