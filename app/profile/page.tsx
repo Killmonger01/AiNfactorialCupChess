@@ -104,6 +104,15 @@ export default function ProfilePage() {
           >
             ← Back
           </Link>
+          <Link
+            href="/community"
+            className="text-sm font-medium transition-all duration-200"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--accent)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-muted)' }}
+          >
+            Community
+          </Link>
           <div className="flex items-center gap-2">
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.6)' }} />
             <span style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>My Profile</span>

@@ -174,6 +174,15 @@ export default function Home() {
         {/* Nav */}
         <div className="flex items-center gap-4">
           <Link
+            href="/community"
+            className="text-sm font-medium transition-all duration-200"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-muted)' }}
+          >
+            Community
+          </Link>
+          <Link
             href="/profile"
             className="text-sm font-medium transition-all duration-200"
             style={{ color: 'var(--text-muted)' }}
