@@ -230,12 +230,13 @@ RETURNS TABLE (
   from_user_id UUID,
   email        TEXT,
   royale       BOOLEAN,
+  fog_of_war   BOOLEAN,
   created_at   TIMESTAMPTZ
 )
 LANGUAGE sql
 SECURITY DEFINER
 AS $$
-  SELECT gi.id, gi.game_id, gi.from_user_id, u.email, gi.royale, gi.created_at
+  SELECT gi.id, gi.game_id, gi.from_user_id, u.email, gi.royale, gi.fog_of_war, gi.created_at
   FROM game_invites gi
   JOIN auth.users u ON u.id = gi.from_user_id
   WHERE gi.to_user_id = auth.uid()
@@ -283,6 +284,10 @@ ALTER TABLE multiplayer_games ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FA
 
 -- Add royale flag to game_invites so the notification can show the mode.
 ALTER TABLE game_invites ADD COLUMN IF NOT EXISTS royale BOOLEAN DEFAULT FALSE;
+
+-- ─── Fog of War columns ───────────────────────────────────────────────────────
+ALTER TABLE multiplayer_games ADD COLUMN IF NOT EXISTS fog_of_war BOOLEAN DEFAULT FALSE;
+ALTER TABLE game_invites      ADD COLUMN IF NOT EXISTS fog_of_war BOOLEAN DEFAULT FALSE;
 
 -- ─── Realtime ─────────────────────────────────────────────────────────────────
 -- Push game_invites changes over WebSocket so challenge notifications are instant.

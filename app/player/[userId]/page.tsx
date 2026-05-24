@@ -212,10 +212,11 @@ export default function PlayerPage({ params }: { params: { userId: string } }) {
     setChallenging(true)
     try {
       const royale       = mode === 'royale'
+      const fogOfWar     = mode === 'fog'
       const playerId     = getOrCreatePlayerId()
       const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
-      await sendGameInvite(userId, gameId, royale)
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale, fogOfWar)
+      await sendGameInvite(userId, gameId, royale, fogOfWar)
       router.push(`/play/${gameId}`)
     } catch (err) {
       console.error(err)

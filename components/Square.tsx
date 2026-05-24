@@ -11,6 +11,7 @@ interface SquareProps {
   isLastMoveFrom: boolean
   isLastMoveTo: boolean
   flipped?: boolean
+  isFogged?: boolean
   onClick: (sq: Square) => void
 }
 
@@ -24,12 +25,15 @@ export default function SquareComponent({
   isLastMoveFrom,
   isLastMoveTo,
   flipped = false,
+  isFogged = false,
   onClick,
 }: SquareProps) {
   const baseColor = isLight ? '#f0d9b5' : '#b07040'
 
   let bg = baseColor
-  if (isSelected) {
+  if (isFogged) {
+    bg = isLight ? '#1a1f2e' : '#0f1318'
+  } else if (isSelected) {
     bg = isLight ? '#a8f0cf' : '#2ea875'
   } else if (isLastMoveFrom || isLastMoveTo) {
     bg = isLight ? '#c8ecd8' : '#4a9e70'
@@ -40,13 +44,22 @@ export default function SquareComponent({
       role="button"
       tabIndex={0}
       aria-label={`${String.fromCharCode(97 + col)}${8 - row}`}
-      onClick={() => onClick({ row, col })}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick({ row, col }) }}
-      style={{ backgroundColor: bg, transition: 'filter 0.1s ease' }}
-      className="relative flex items-center justify-center w-full h-full cursor-pointer hover:brightness-110"
+      onClick={() => { if (!isFogged) onClick({ row, col }) }}
+      onKeyDown={e => { if (!isFogged && (e.key === 'Enter' || e.key === ' ')) onClick({ row, col }) }}
+      style={{ backgroundColor: bg, transition: 'background-color 0.2s ease' }}
+      className={`relative flex items-center justify-center w-full h-full ${isFogged ? 'cursor-default' : 'cursor-pointer hover:brightness-110'}`}
     >
+      {isFogged && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(15,20,30,0.1) 0%, rgba(5,8,14,0.6) 100%)',
+          }}
+        />
+      )}
+
       {/* Legal move dot — jade */}
-      {isLegalMove && !piece && (
+      {!isFogged && isLegalMove && !piece && (
         <div
           className="rounded-full pointer-events-none"
           style={{
@@ -58,7 +71,7 @@ export default function SquareComponent({
         />
       )}
       {/* Legal move capture ring — jade */}
-      {isLegalMove && piece && (
+      {!isFogged && isLegalMove && piece && (
         <div
           className="absolute inset-0 rounded-none pointer-events-none"
           style={{
@@ -66,7 +79,7 @@ export default function SquareComponent({
           }}
         />
       )}
-      {piece && <PieceComponent piece={piece} />}
+      {!isFogged && piece && <PieceComponent piece={piece} />}
 
       {/* Rank label */}
       {((!flipped && col === 0) || (flipped && col === 7)) && (

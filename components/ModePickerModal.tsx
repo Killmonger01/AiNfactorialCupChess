@@ -1,6 +1,6 @@
 'use client'
 
-export type GameModeChoice = 'normal' | 'royale'
+export type GameModeChoice = 'normal' | 'royale' | 'fog'
 
 interface Props {
   onSelect: (mode: GameModeChoice) => void
@@ -99,6 +99,36 @@ export function ModePickerModal({ onSelect, onClose, loading }: Props) {
             </div>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               Every 8 moves a random rule changes. Pure chaos.
+            </p>
+          </div>
+        </button>
+
+        {/* Fog of War */}
+        <button
+          disabled={loading}
+          onClick={() => onSelect('fog')}
+          className="flex items-center gap-4 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden"
+          style={{
+            background:   'linear-gradient(135deg, rgba(100,149,237,0.08), rgba(100,149,237,0.03))',
+            border:       '1px solid rgba(100,149,237,0.3)',
+            borderRadius: '14px',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,149,237,0.55)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,149,237,0.3)' }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(100,149,237,0.4), transparent)' }} />
+          <div
+            className="w-12 h-12 flex items-center justify-center rounded-xl text-2xl flex-shrink-0"
+            style={{ background: 'rgba(100,149,237,0.12)', border: '1px solid rgba(100,149,237,0.3)' }}
+          >
+            🌫️
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="font-bold text-sm" style={{ color: '#6495ed' }}>Fog of War</p>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              Only see squares your pieces can reach. Enemy hidden in the fog.
             </p>
           </div>
         </button>

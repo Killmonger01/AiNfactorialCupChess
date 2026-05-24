@@ -22,6 +22,8 @@ export interface MultiplayerGameRow {
   black_player_id: string | null
   last_move: Move | null
   created_at: string
+  royale?: boolean
+  fog_of_war?: boolean
 }
 
 // ─── Player identity ──────────────────────────────────────────────────────────
@@ -48,6 +50,7 @@ export async function createMultiplayerGame(
   initialState: GameState,
   playerId: string,
   royale = false,
+  fogOfWar = false,
 ): Promise<string> {
   const { data, error } = await supabase
     .from('multiplayer_games')
@@ -57,6 +60,7 @@ export async function createMultiplayerGame(
       status: 'waiting',
       white_player_id: playerId,
       royale,
+      fog_of_war: fogOfWar,
     })
     .select('id')
     .single()

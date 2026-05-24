@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BoardComponent from '@/components/Board'
 import { getLegalMoves, movePiece } from '@/lib/chess'
 import { getLegalMovesRoyale, movePieceRoyale, ROYALE_RULE_LABELS } from '@/lib/royale'
+import { getVisibleSquares } from '@/lib/fogOfWar'
 import { useMultiplayer } from '@/hooks/useMultiplayer'
 import { useAuth } from '@/hooks/useAuth'
 import { saveGame } from '@/lib/db'
@@ -25,6 +26,7 @@ export default function MultiplayerGamePage({
     lastMove,
     status,
     error,
+    fogOfWar,
     applyMove,
     resign,
   } = useMultiplayer(gameId)
@@ -132,6 +134,11 @@ export default function MultiplayerGamePage({
   }
 
   const gameOver = !!gameState && (gameState.isCheckmate || gameState.isStalemate)
+
+  const visibleSquares = useMemo(() => {
+    if (!fogOfWar || !gameState || !role || gameOver) return undefined
+    return getVisibleSquares(gameState.board, role, gameState)
+  }, [fogOfWar, gameState, role, gameOver])
 
   // ── Error screen ────────────────────────────────────────────────────────────
   if (error) {
@@ -284,6 +291,29 @@ export default function MultiplayerGamePage({
           </div>
         )}
 
+        {/* ── Fog of War banner ──────────────────────────────────────── */}
+        {fogOfWar && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 18px',
+              background: 'linear-gradient(135deg, rgba(100,149,237,0.1), rgba(100,149,237,0.04))',
+              border: '1px solid rgba(100,149,237,0.3)',
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 480,
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>🌫️</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6495ed' }}>Fog of War</span>
+            <span style={{ fontSize: '0.72rem', color: 'rgba(100,149,237,0.65)' }}>
+              — only your reachable squares are visible
+            </span>
+          </div>
+        )}
+
         {/* ── Board ──────────────────────────────────────────────────── */}
         <BoardComponent
           board={gameState.board}
@@ -292,6 +322,7 @@ export default function MultiplayerGamePage({
           lastMove={lastMove}
           onSquareClick={handleSquareClick}
           flipped={role === 'black'}
+          visibleSquares={visibleSquares}
         />
 
         {/* ── Role + connection indicator ─────────────────────────────── */}

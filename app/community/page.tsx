@@ -274,10 +274,11 @@ export default function CommunityPage() {
     setChallenging(friend.friend_id)
     try {
       const royale       = mode === 'royale'
+      const fogOfWar     = mode === 'fog'
       const playerId     = getOrCreatePlayerId()
       const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
-      await sendGameInvite(friend.friend_id, gameId, royale)
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale, fogOfWar)
+      await sendGameInvite(friend.friend_id, gameId, royale, fogOfWar)
       router.push(`/play/${gameId}`)
     } catch (err) {
       console.error(err)

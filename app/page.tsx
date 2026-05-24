@@ -105,14 +105,14 @@ export default function Home() {
     newGame(m, skill, color, royale)
   }
 
-  async function handleStartMultiplayer(royale = false) {
+  async function handleStartMultiplayer(royale = false, fogOfWar = false) {
     if (mpLoading) return
     setMpLoading(true)
     setSetupOpen(false)
     try {
       const playerId     = getOrCreatePlayerId()
       const initialState = royale ? createInitialGameStateRoyale() : createInitialGameState()
-      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale)
+      const gameId       = await createMultiplayerGame(supabase, initialState, playerId, royale, fogOfWar)
       router.push(`/play/${gameId}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -135,7 +135,7 @@ export default function Home() {
       {setupOpen && (
         <SetupModal
           onStart={handleStart}
-          onStartMultiplayer={(royale) => handleStartMultiplayer(royale)}
+          onStartMultiplayer={(royale, fogOfWar) => handleStartMultiplayer(royale, fogOfWar)}
           multiplayerLoading={mpLoading}
           onClose={() => setSetupOpen(false)}
         />

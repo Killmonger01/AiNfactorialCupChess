@@ -5,7 +5,7 @@ import type { GameMode } from '@/hooks/useChess'
 
 interface Props {
   onStart: (mode: GameMode, skillLevel: number, playerColor?: 'white' | 'black', royale?: boolean) => void
-  onStartMultiplayer?: (royale: boolean) => void
+  onStartMultiplayer?: (royale: boolean, fogOfWar: boolean) => void
   multiplayerLoading?: boolean
   onClose?: () => void
 }
@@ -23,11 +23,13 @@ type Panel = 'main' | 'ai' | 'pvp' | 'mp'
 function ModePicker({
   onNormal,
   onRoyale,
+  onFog,
   onBack,
   loading,
 }: {
   onNormal: () => void
   onRoyale: () => void
+  onFog?: () => void
   onBack: () => void
   loading?: boolean
 }) {
@@ -92,6 +94,36 @@ function ModePicker({
           <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>Every 8 moves a random rule changes.</p>
         </div>
       </button>
+
+      {/* Fog of War — only shown when handler provided (multiplayer only) */}
+      {onFog && (
+        <button
+          disabled={loading}
+          onClick={onFog}
+          className="flex items-center gap-4 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden"
+          style={{
+            background:   'linear-gradient(135deg, rgba(100,149,237,0.08), rgba(100,149,237,0.03))',
+            border:       '1px solid rgba(100,149,237,0.3)',
+            borderRadius: '14px',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,149,237,0.55)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,149,237,0.3)' }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(100,149,237,0.4), transparent)' }} />
+          <div
+            className="w-12 h-12 flex items-center justify-center rounded-xl text-2xl flex-shrink-0"
+            style={{ background: 'rgba(100,149,237,0.12)', border: '1px solid rgba(100,149,237,0.3)' }}
+          >
+            🌫️
+          </div>
+          <div>
+            <p className="font-bold text-sm mb-0.5" style={{ color: '#6495ed' }}>Fog of War</p>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              Only see squares your pieces can reach. Enemy hidden in the fog.
+            </p>
+          </div>
+        </button>
+      )}
 
       {loading && (
         <p className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>Creating game…</p>
@@ -201,8 +233,9 @@ export default function SetupModal({ onStart, onStartMultiplayer, multiplayerLoa
         {panel === 'mp' && (
           <ModePicker
             loading={multiplayerLoading}
-            onNormal={() => onStartMultiplayer?.(false)}
-            onRoyale={() => onStartMultiplayer?.(true)}
+            onNormal={() => onStartMultiplayer?.(false, false)}
+            onRoyale={() => onStartMultiplayer?.(true, false)}
+            onFog={() => onStartMultiplayer?.(false, true)}
             onBack={() => setPanel('main')}
           />
         )}
